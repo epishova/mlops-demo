@@ -1,0 +1,3 @@
+customer,age,purchases_in_past_week,amount_spent,timestamp
+bob_02,40,145,400,2023-09-01T08:00:00Z
+charlie_03,30,83,1200,2023-09-02T08:00:00Z
