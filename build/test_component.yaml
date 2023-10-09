@@ -1,0 +1,57 @@
+# Copyright 2021 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#            http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#############################################################################
+# CI/CD steps for Cloud Build to test KFP components.
+#############################################################################
+
+steps:
+
+# Clone the repository.
+- name: 'gcr.io/cloud-builders/git'
+  args: ['clone', '--single-branch', '--branch',
+         'main', 'https://github.com/epishova/mlops-demo.git',
+         '--depth', '1',
+         '--verbose']
+  id: 'Clone Repository'
+
+
+# Run component unit tests.
+- name: 'gcr.io/epishova-joonix-sandbox/cicd:latest'
+  entrypoint: 'python'
+  args: ['components/add_numbers/tests/unit/unittest_1.py']
+  dir: 'mlops-demo'
+  id: 'Unit Test Component'
+  waitFor: ['Clone Repository']
+  timeout: 1800s
+
+
+# Build the image that encapsulates the component.
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/epishova-joonix-sandbox/my-component:v1', 'components/add_numbers/src']
+  dir: 'mlops-demo'
+  id: 'Build Component Image'
+  waitFor: ['Unit Test Component']
+
+
+# Upload compiled component to GCS.
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['cp', 'components/add_numbers/src/component_metadata/add.yaml', 'gs://epishova-team-components']
+  dir: 'mlops-demo'
+  id:  'Upload Component to GCS'
+  waitFor: ['Build Component Image']
+  
+
+# Push the Component Image to Container Registy.
+images: ['gcr.io/epishova-joonix-sandbox/my-component:v1']
